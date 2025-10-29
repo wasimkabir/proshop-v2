@@ -1,0 +1,41 @@
+# syntax=docker/dockerfile:1
+
+# ========== Builder ==========
+FROM node:24-alpine AS builder
+WORKDIR /app
+
+# Install build deps for native modules
+RUN apk add --no-cache python3 make g++ bash
+
+# Copy root package files (root package.json controls backend)
+COPY package*.json ./
+# Install all deps (including dev if needed for building native modules)
+RUN npm ci
+
+# Copy backend code and uploads
+COPY backend ./backend
+COPY uploads ./uploads
+COPY package-lock.json ./
+
+# ========== Runtime ==========
+FROM node:24-alpine AS runtime
+WORKDIR /app
+
+# Minimal runtime deps
+RUN apk add --no-cache ca-certificates
+
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs && adduser -S -u 1001 -G nodejs nodejs
+
+# Copy only runtime artifacts from builder
+COPY --from=builder --chown=nodejs:nodejs /app/node_modules ./node_modules
+COPY --from=builder --chown=nodejs:nodejs /app/package.json ./package.json
+COPY --from=builder --chown=nodejs:nodejs /app/backend ./backend
+COPY --from=builder --chown=nodejs:nodejs /app/uploads ./uploads
+
+USER nodejs
+
+ENV NODE_ENV=production
+EXPOSE 5000
+
+CMD ["node", "backend/server.js"]

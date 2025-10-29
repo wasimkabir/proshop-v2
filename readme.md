@@ -129,6 +129,21 @@ jane@email.com (Customer)
 123456
 ```
 
+## Docker
+
+Implemented docker
+
+```
+# Run the project
+docker compose -f docker-compose.dev.yml up --build
+
+# Import data
+docker compose -f docker-compose.dev.yml exec backend npm run data:import
+
+# Destroy data
+docker compose -f docker-compose.dev.yml exec backend npm run data:destroy
+```
+
 ---
 
 # Bug Fixes, corrections and code FAQ
